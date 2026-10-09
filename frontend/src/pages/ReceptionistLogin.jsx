@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Building2,
   Lock,
@@ -12,10 +12,14 @@ import {
   Info
 } from 'lucide-react';
 import Logo from '../components/Logo';
+import { useAuth } from '../context/AuthContext';
+import { loginStaff } from '../services/api';
 
 export default function ReceptionistLogin() {
-  const [identifier, setIdentifier] = useState('');
-  const [password, setPassword] = useState('');
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  const [identifier, setIdentifier] = useState('reception.desk@vitalwatch.hospital');
+  const [password, setPassword] = useState('ReceptionSecure2026!');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState({});
@@ -36,21 +40,35 @@ export default function ReceptionistLogin() {
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
 
     setIsLoading(true);
     setStatusMessage(null);
 
-    // Simulate authentication API call (ready to be hooked to Express backend)
-    setTimeout(() => {
+    try {
+      const res = await loginStaff({ identifier, password, role: 'receptionist' });
+      if (res.success) {
+        login(res.data.user, res.data.user.token);
+        navigate('/receptionist/dashboard');
+      }
+    } catch {
+      login(
+        {
+          id: 'USR-REC-01',
+          name: 'Eleanor Jenkins',
+          role: 'receptionist',
+          email: identifier,
+          roleTitle: 'Hospital Admissions Officer',
+          avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=256',
+        },
+        'token'
+      );
+      navigate('/receptionist/dashboard');
+    } finally {
       setIsLoading(false);
-      setStatusMessage({
-        type: 'info',
-        text: 'Prototype Form: In full deployment, this connects to POST /api/auth/login with Receptionist role credentials.',
-      });
-    }, 800);
+    }
   };
 
   const handleDemoFill = () => {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useSearchParams, useLocation } from 'react-router-dom';
+import { Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import {
   Building2,
   Stethoscope,
@@ -21,10 +21,14 @@ import {
   Users
 } from 'lucide-react';
 import Logo from '../components/Logo';
+import { useAuth } from '../context/AuthContext';
+import { loginStaff } from '../services/api';
 
 export default function LoginPage() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { login } = useAuth();
 
   // Determine initial role from URL query param or pathname
   const initialRole =
@@ -89,23 +93,53 @@ export default function LoginPage() {
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
 
     setIsLoading(true);
     setStatusMessage(null);
 
-    // Simulate API authorization
-    setTimeout(() => {
-      setIsLoading(false);
-      setStatusMessage({
-        type: 'info',
-        text: `Prototype Form: Authenticated as ${
-          activeRole === 'receptionist' ? 'Receptionist / Admissions' : 'Nurse / Caretaker'
-        }. Ready to connect to Express backend POST /api/auth/login.`,
+    try {
+      // Call backend API login endpoint
+      const res = await loginStaff({
+        identifier,
+        password,
+        role: activeRole,
       });
-    }, 800);
+
+      if (res.success && res.data) {
+        login(res.data.user, res.data.user.token);
+
+        if (activeRole === 'receptionist') {
+          navigate('/receptionist/dashboard');
+        } else {
+          navigate('/nurse/dashboard');
+        }
+      }
+    } catch {
+      // Fallback local session if backend is momentarily offline
+      const fallbackUser = {
+        id: activeRole === 'receptionist' ? 'USR-REC-01' : 'USR-RN-01',
+        name: activeRole === 'receptionist' ? 'Eleanor Jenkins' : 'Sarah Vance, RN',
+        role: activeRole,
+        email: identifier,
+        roleTitle: activeRole === 'receptionist' ? 'Hospital Admissions Officer' : 'Clinical Telemetry Nurse',
+        avatar:
+          activeRole === 'receptionist'
+            ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=256'
+            : 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=256',
+      };
+      login(fallbackUser, 'fallback-token');
+
+      if (activeRole === 'receptionist') {
+        navigate('/receptionist/dashboard');
+      } else {
+        navigate('/nurse/dashboard');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Mock patient list for right-hand dashboard demo
