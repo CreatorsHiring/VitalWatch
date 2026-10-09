@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary-green: #16845B;
+  --color-dark-green: #105C43;
+  --color-light-mint: #EAF7F0;
+  --color-mint-subtle: #F4FAF6;
+  --color-primary-text: #172B24;
+  --color-secondary-text: #64746C;
+  --color-card-border: #E2EAE5;
+  --color-section-bg: #F7FAF8;
+  --color-alert-amber: #D97706;
+  --color-alert-red: #DC2626;
+
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+:root {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  color: #172B24;
+  background-color: #FFFFFF;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F7FAF8;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #C4D7CE;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #16845B;
+}
+
+/* Subtle ecg line animation */
+@keyframes ecgPulse {
+  0% {
+    stroke-dashoffset: 1000;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-ecg {
+  stroke-dasharray: 1000;
+  animation: ecgPulse 4s linear infinite;
+}
+
+@keyframes gentlePulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.05);
+  }
+}
+
+.animate-gentle-pulse {
+  animation: gentlePulse 2s ease-in-out infinite;
+}
