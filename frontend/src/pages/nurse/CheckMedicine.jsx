@@ -15,6 +15,8 @@ import {
   X,
   Layers,
   Activity,
+  FileText,
+  Check,
 } from 'lucide-react';
 import {
   getNursePatients,
@@ -39,9 +41,10 @@ export default function CheckMedicine() {
   const [ocrConfidence, setOcrConfidence] = useState(null);
   const [rawOcrText, setRawOcrText] = useState('');
 
-  // Evaluation Result
+  // Evaluation Result & Modal Popup State
   const [evaluating, setEvaluating] = useState(false);
   const [evaluationResult, setEvaluationResult] = useState(null);
+  const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [_error, setError] = useState(null);
 
   const fileInputRef = useRef(null);
@@ -65,6 +68,7 @@ export default function CheckMedicine() {
     if (selectedPatientId) {
       setLoadingPatient(true);
       setEvaluationResult(null);
+      setIsResultModalOpen(false);
       getPatientProfileDetail(selectedPatientId)
         .then((res) => {
           if (res?.patient) {
@@ -81,13 +85,11 @@ export default function CheckMedicine() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate type
     if (!file.type.match(/image\/(jpeg|jpg|png|webp)/)) {
       alert('Please upload a valid image file (JPG, PNG, or WebP).');
       return;
     }
 
-    setUploadedImage(file);
     const previewUrl = URL.createObjectURL(file);
     setUploadedImagePreview(previewUrl);
 
@@ -99,6 +101,7 @@ export default function CheckMedicine() {
     setOcrLoading(true);
     setOcrConfidence(null);
     setEvaluationResult(null);
+    setIsResultModalOpen(false);
 
     try {
       const res = await ocrParseMedicine({
@@ -169,6 +172,7 @@ export default function CheckMedicine() {
     setOcrConfidence(0.99);
     setUploadedImagePreview(null);
     setEvaluationResult(null);
+    setIsResultModalOpen(false);
   };
 
   // Run Safety Engine Check
@@ -195,6 +199,7 @@ export default function CheckMedicine() {
 
       if (res?.evaluation) {
         setEvaluationResult(res.evaluation);
+        setIsResultModalOpen(true); // Open the Pop-up Modal automatically
       } else {
         throw new Error('Could not evaluate medication safety rules.');
       }
@@ -205,14 +210,23 @@ export default function CheckMedicine() {
     }
   };
 
+  const handleSelectAlternative = (alt) => {
+    setMedicineName(alt.name);
+    const firstWord = alt.name.split(' ')[0];
+    setActiveIngredient(firstWord);
+    setRawOcrText(`Switched to recommended alternative: ${alt.name}`);
+    setUploadedImagePreview(null);
+    setIsResultModalOpen(false);
+  };
+
   const clearForm = () => {
     setMedicineName('');
     setActiveIngredient('');
-    setUploadedImage(null);
     setUploadedImagePreview(null);
     setOcrConfidence(null);
     setRawOcrText('');
     setEvaluationResult(null);
+    setIsResultModalOpen(false);
   };
 
   return (
@@ -368,10 +382,11 @@ export default function CheckMedicine() {
             </div>
             <div>
               <h2 className="text-base font-bold text-[#172B24]">
-                Step 1: Medicine Package OCR Scan or Prescription Entry
+                Medicine Package OCR Scan or Prescription Entry
               </h2>
               <p className="text-[11px] text-[#64746C]">
-                Upload a label photo for optical character extraction or select a demo medication.
+                Upload a label photo for optical character extraction or enter medication details to
+                verify.
               </p>
             </div>
           </div>
@@ -409,7 +424,7 @@ export default function CheckMedicine() {
           </div>
         </div>
 
-        {/* OCR Image Upload Dropzone */}
+        {/* OCR Image Upload Dropzone & Fields Form */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
           <div
             onClick={() => fileInputRef.current?.click()}
@@ -450,7 +465,7 @@ export default function CheckMedicine() {
             )}
           </div>
 
-          {/* Extracted / Editable Fields Form */}
+          {/* Form */}
           <form onSubmit={handleEvaluateSafety} className="space-y-3.5">
             {ocrLoading ? (
               <div className="p-8 text-center bg-[#F7FAF8] rounded-2xl border border-[#E2EAE5] space-y-2">
@@ -499,191 +514,379 @@ export default function CheckMedicine() {
                   />
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={evaluating || (!medicineName.trim() && !activeIngredient.trim())}
-                  className="w-full py-3 bg-[#16845B] hover:bg-[#105C43] text-white text-xs font-bold rounded-xl shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {evaluating ? (
-                    <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Evaluating Safety Rules...</span>
-                    </>
-                  ) : (
-                    <>
-                      <ShieldCheck className="w-4 h-4" />
-                      <span>Run Medication Safety Engine Check</span>
-                    </>
+                <div className="pt-1 flex items-center gap-3">
+                  <button
+                    type="submit"
+                    disabled={evaluating || (!medicineName.trim() && !activeIngredient.trim())}
+                    className="flex-1 py-3 bg-[#16845B] hover:bg-[#105C43] text-white text-xs font-bold rounded-xl shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    {evaluating ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Evaluating Safety Rules...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>Run Medication Safety Engine Check</span>
+                      </>
+                    )}
+                  </button>
+
+                  {evaluationResult && (
+                    <button
+                      type="button"
+                      onClick={() => setIsResultModalOpen(true)}
+                      className="px-4 py-3 bg-[#EAF7F0] hover:bg-[#D5EFE2] text-[#16845B] text-xs font-bold rounded-xl border border-[#CDEBDC] transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span>View Pop-up Report</span>
+                    </button>
                   )}
-                </button>
+                </div>
               </>
             )}
           </form>
         </div>
       </div>
 
-      {/* STEP 2: SAFETY EVALUATION RESULTS PANEL */}
-      {evaluationResult && (
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E2EAE5] shadow-xs space-y-6 animate-in fade-in">
-          <div className="flex items-center justify-between border-b border-[#E2EAE5] pb-4">
-            <div className="flex items-center gap-2.5">
-              <div
-                className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-                  evaluationResult.status === 'potential_conflict_found'
-                    ? 'bg-rose-100 text-rose-700'
-                    : 'bg-[#EAF7F0] text-[#16845B]'
-                }`}
-              >
-                {evaluationResult.status === 'potential_conflict_found' ? (
-                  <AlertOctagon className="w-5 h-5" />
-                ) : (
-                  <ShieldCheck className="w-5 h-5" />
-                )}
-              </div>
-              <div>
-                <h2 className="text-base font-bold text-[#172B24]">
-                  Step 2: Automated Medication Safety Engine Findings
-                </h2>
-                <span className="text-[11px] text-[#64746C]">
-                  Evaluated at: {new Date(evaluationResult.checkedAt).toLocaleTimeString()}
-                </span>
-              </div>
-            </div>
-
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-bold ${
+      {/* COMPACT RECENT CHECK BANNER (If modal was closed) */}
+      {evaluationResult && !isResultModalOpen && (
+        <div
+          onClick={() => setIsResultModalOpen(true)}
+          className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-4 shadow-xs hover:shadow-md ${
+            evaluationResult.status === 'potential_conflict_found'
+              ? 'bg-rose-50/70 border-rose-300 hover:bg-rose-50'
+              : 'bg-[#EAF7F0]/70 border-[#CDEBDC] hover:bg-[#EAF7F0]'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
                 evaluationResult.status === 'potential_conflict_found'
-                  ? 'bg-rose-100 text-rose-800 border border-rose-300'
-                  : 'bg-[#EAF7F0] text-[#16845B] border border-[#CDEBDC]'
+                  ? 'bg-rose-100 text-rose-700'
+                  : 'bg-white text-[#16845B] border border-[#CDEBDC]'
               }`}
             >
-              {evaluationResult.status === 'potential_conflict_found'
-                ? 'Clinical Conflict Identified'
-                : 'No Rule Conflicts Found'}
-            </span>
-          </div>
+              {evaluationResult.status === 'potential_conflict_found' ? (
+                <AlertOctagon className="w-5 h-5" />
+              ) : (
+                <CheckCircle2 className="w-5 h-5" />
+              )}
+            </div>
 
-          {/* Banner message */}
-          <div
-            className={`p-4 rounded-2xl border text-xs leading-relaxed flex items-start gap-3 ${
-              evaluationResult.status === 'potential_conflict_found'
-                ? 'bg-rose-50 border-rose-200 text-rose-900'
-                : 'bg-[#EAF7F0]/70 border-[#CDEBDC] text-[#105C43]'
-            }`}
-          >
-            {evaluationResult.status === 'potential_conflict_found' ? (
-              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-            ) : (
-              <CheckCircle2 className="w-5 h-5 text-[#16845B] shrink-0 mt-0.5" />
-            )}
             <div>
-              <p className="font-bold text-sm mb-1">{evaluationResult.message}</p>
-              <p className="text-[11px] opacity-90">
-                Proposed Medicine:{' '}
-                <strong className="underline">
-                  {evaluationResult.proposedMedicine?.name} (
-                  {evaluationResult.proposedMedicine?.activeIngredient || 'Ingredient'}
-                  )
-                </strong>{' '}
-                for patient{' '}
-                <strong>
-                  {evaluationResult.patientContext?.patientName} (
-                  {evaluationResult.patientContext?.patientId})
-                </strong>
-                .
-              </p>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-xs text-[#172B24]">
+                  Latest Safety Check: {evaluationResult.proposedMedicine?.name}
+                </span>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    evaluationResult.status === 'potential_conflict_found'
+                      ? 'bg-rose-200 text-rose-900'
+                      : 'bg-emerald-100 text-emerald-800'
+                  }`}
+                >
+                  {evaluationResult.status === 'potential_conflict_found'
+                    ? 'Clinical Conflict Found'
+                    : 'Clearance Confirmed'}
+                </span>
+              </div>
+              <p className="text-[11px] text-[#64746C] mt-0.5">{evaluationResult.message}</p>
             </div>
           </div>
 
-          {/* Findings List (Drug-Allergy, Drug-Disease, Drug-Drug) */}
-          {evaluationResult.findings && evaluationResult.findings.length > 0 && (
-            <div className="space-y-4 pt-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-rose-800">
-                Identified Clinical Conflicts ({evaluationResult.findings.length}):
-              </h3>
+          <button
+            type="button"
+            className="px-3.5 py-2 rounded-xl bg-white border border-[#E2EAE5] text-xs font-bold text-[#172B24] hover:text-[#16845B] hover:border-[#16845B]/40 transition-colors flex items-center gap-1.5 shrink-0"
+          >
+            <span>Open Safety Assessment Pop-up</span>
+            <ChevronRight className="w-3.5 h-3.5 text-[#16845B]" />
+          </button>
+        </div>
+      )}
 
-              {evaluationResult.findings.map((f, idx) => (
+      {/* ========================================================================= */}
+      {/* POP-UP MODAL: CLINICAL MEDICATION SAFETY REPORT & PROPER MEDICINE SUGGESTIONS */}
+      {/* ========================================================================= */}
+      {isResultModalOpen && evaluationResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
+          <div
+            className="bg-white rounded-3xl max-w-3xl w-full border border-[#E2EAE5] shadow-2xl relative my-auto max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* MODAL HEADER */}
+            <div className="p-5 sm:p-6 border-b border-[#E2EAE5] flex items-start justify-between gap-4 bg-white sticky top-0 z-10">
+              <div className="flex items-center gap-3.5">
                 <div
-                  key={idx}
-                  className="p-5 rounded-2xl bg-rose-50/40 border border-rose-300 space-y-3"
+                  className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs ${
+                    evaluationResult.status === 'potential_conflict_found'
+                      ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                      : 'bg-[#EAF7F0] text-[#16845B] border border-[#CDEBDC]'
+                  }`}
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-200 text-rose-900">
-                        {f.severity}
-                      </span>
-                      <span className="text-xs font-bold text-[#172B24] uppercase tracking-wide">
-                        {f.type.replace(/_/g, ' ')}
-                      </span>
-                    </div>
+                  {evaluationResult.status === 'potential_conflict_found' ? (
+                    <AlertOctagon className="w-6 h-6" />
+                  ) : (
+                    <ShieldCheck className="w-6 h-6" />
+                  )}
+                </div>
 
-                    <span className="text-[10px] text-[#64746C] font-mono bg-white px-2 py-0.5 rounded border border-[#E2EAE5]">
-                      Rule ID: {f.ruleId}
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-base sm:text-lg font-extrabold text-[#172B24] tracking-tight">
+                      Medication Safety Clinical Assessment
+                    </h2>
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                        evaluationResult.status === 'potential_conflict_found'
+                          ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                          : 'bg-[#EAF7F0] text-[#16845B] border border-[#CDEBDC]'
+                      }`}
+                    >
+                      {evaluationResult.status === 'potential_conflict_found'
+                        ? 'Potential Harm Detected'
+                        : 'No Conflicts Found in Rules'}
                     </span>
                   </div>
+                  <p className="text-xs text-[#64746C] mt-0.5">
+                    Target Patient:{' '}
+                    <strong className="text-[#172B24]">
+                      {evaluationResult.patientContext?.patientName} (
+                      {evaluationResult.patientContext?.patientId})
+                    </strong>{' '}
+                    • {evaluationResult.patientContext?.ward} (
+                    {evaluationResult.patientContext?.room})
+                  </p>
+                </div>
+              </div>
 
-                  <div className="text-xs text-[#172B24] space-y-1.5">
-                    <p>
-                      <strong className="text-rose-800">Trigger Conflict:</strong>{' '}
-                      {f.patientConflictItem} (Matched against {f.matchedIngredient})
-                    </p>
-                    <p className="text-[#64746C]">{f.explanation}</p>
-                  </div>
+              <button
+                type="button"
+                onClick={() => setIsResultModalOpen(false)}
+                className="p-2 rounded-xl text-[#64746C] hover:text-[#172B24] hover:bg-[#F7FAF8] transition-colors cursor-pointer shrink-0"
+                aria-label="Close Pop-up"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-                  <div className="p-3 bg-white rounded-xl border border-rose-200 text-xs text-[#172B24]">
-                    <strong className="text-rose-700 block mb-0.5">Clinical Recommendation:</strong>
-                    <span>{f.recommendation}</span>
-                  </div>
-
-                  <div className="text-[10px] text-[#64746C]">
-                    Source Guideline: {f.source}
+            {/* MODAL SCROLLABLE BODY */}
+            <div className="flex-1 overflow-y-auto p-5 sm:p-7 space-y-6">
+              {/* PROPOSED MEDICINE SUMMARY BAR */}
+              <div className="p-4 rounded-2xl bg-[#F7FAF8] border border-[#E2EAE5] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div className="space-y-0.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#64746C] block">
+                    Proposed Medication Under Review
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Pill className="w-4 h-4 text-[#16845B]" />
+                    <span className="font-extrabold text-sm text-[#172B24]">
+                      {evaluationResult.proposedMedicine?.name}
+                    </span>
+                    <span className="text-xs text-[#64746C]">
+                      ({evaluationResult.proposedMedicine?.activeIngredient || 'Generic'})
+                    </span>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
 
-          {/* Alternative Medications for Clinical Review */}
-          {evaluationResult.alternatives && evaluationResult.alternatives.length > 0 && (
-            <div className="p-5 rounded-2xl bg-[#F7FAF8] border border-[#E2EAE5] space-y-3">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[#16845B]" />
-                <h4 className="text-xs font-bold text-[#172B24] uppercase tracking-wider">
-                  Alternative Medications for Clinical Review
-                </h4>
+                <div className="text-right shrink-0">
+                  <span className="text-[10px] text-[#64746C] block">
+                    Drug Class:{' '}
+                    <strong className="text-[#172B24]">
+                      {evaluationResult.proposedMedicine?.drugClass || 'Pharmaceutical Agent'}
+                    </strong>
+                  </span>
+                  <span className="text-[10px] text-[#64746C]">
+                    Evaluated: {new Date(evaluationResult.checkedAt).toLocaleTimeString()}
+                  </span>
+                </div>
               </div>
-              <p className="text-[11px] text-[#64746C]">
-                The following alternatives from the synthetic drug catalog may be considered in
-                consultation with the attending physician:
-              </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                {evaluationResult.alternatives.map((alt, i) => (
-                  <div
-                    key={i}
-                    className="p-3 bg-white rounded-xl border border-[#E2EAE5] text-xs space-y-1"
-                  >
-                    <span className="font-bold text-[#172B24] block">{alt.name}</span>
-                    <span className="text-[10px] text-[#16845B] font-semibold block">
-                      {alt.class}
-                    </span>
-                    <p className="text-[11px] text-[#64746C]">{alt.note}</p>
+              {/* SECTION: WHY THE MEDICINE CAN BE HARMFUL */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle
+                    className={`w-4 h-4 ${
+                      evaluationResult.status === 'potential_conflict_found'
+                        ? 'text-rose-600'
+                        : 'text-[#16845B]'
+                    }`}
+                  />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#172B24]">
+                    Why This Medicine Can Be Harmful for This Patient
+                  </h3>
+                </div>
+
+                {evaluationResult.findings && evaluationResult.findings.length > 0 ? (
+                  <div className="space-y-3.5">
+                    {evaluationResult.findings.map((f, idx) => (
+                      <div
+                        key={idx}
+                        className="p-5 rounded-2xl bg-rose-50/60 border border-rose-300 space-y-3"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-rose-200/80 pb-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-200 text-rose-900">
+                              {f.severity}
+                            </span>
+                            <span className="text-xs font-bold text-[#172B24] uppercase tracking-wide">
+                              {f.type.replace(/_/g, ' ')}
+                            </span>
+                          </div>
+
+                          <span className="text-[10px] text-[#64746C] font-mono bg-white px-2 py-0.5 rounded border border-[#E2EAE5]">
+                            Rule ID: {f.ruleId}
+                          </span>
+                        </div>
+
+                        {/* Patient Conflict Item */}
+                        <div className="p-3 bg-white/90 rounded-xl border border-rose-200 text-xs space-y-1">
+                          <span className="text-[10px] font-bold text-rose-800 uppercase tracking-wider block">
+                            Patient Health Record Conflict:
+                          </span>
+                          <p className="text-xs font-bold text-rose-950">
+                            Patient has documented:{' '}
+                            <span className="underline decoration-rose-400 font-extrabold">
+                              {f.patientConflictItem}
+                            </span>{' '}
+                            (Contraindicated with {f.matchedIngredient})
+                          </p>
+                        </div>
+
+                        {/* Clinical Explanation of Harm */}
+                        <div className="text-xs text-[#172B24] space-y-1">
+                          <span className="text-[10px] font-bold text-[#64746C] uppercase tracking-wider block">
+                            Clinical Mechanism of Harm:
+                          </span>
+                          <p className="text-xs text-[#172B24] leading-relaxed">
+                            {f.explanation}
+                          </p>
+                        </div>
+
+                        {/* Recommendation */}
+                        <div className="p-3.5 bg-rose-100/70 rounded-xl border border-rose-300 text-xs text-rose-950 space-y-0.5">
+                          <strong className="block text-rose-900 font-bold">
+                            Clinical Safety Warning &amp; Action:
+                          </strong>
+                          <p className="text-xs leading-relaxed">{f.recommendation}</p>
+                        </div>
+
+                        <div className="text-[10px] text-[#64746C] flex items-center justify-between pt-1">
+                          <span>Guideline Source: {f.source}</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                ) : (
+                  <div className="p-4 rounded-2xl bg-[#EAF7F0] border border-[#CDEBDC] text-xs text-[#105C43] space-y-2">
+                    <div className="flex items-center gap-2 font-bold">
+                      <CheckCircle2 className="w-4 h-4 text-[#16845B]" />
+                      <span>No Documented Harm or Contraindications Found</span>
+                    </div>
+                    <p className="text-[11px] leading-relaxed">
+                      {evaluationResult.message ||
+                        'No matching conflict found in the available demonstration rules for this patient.'}
+                    </p>
+                    <p className="text-[10px] text-[#64746C]">
+                      Patient allergies ({patientData?.medicalHistory?.allergies?.join(', ') || 'None'}), chronic conditions, and current active medications were evaluated without rule collision.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* SECTION: SUGGESTED PROPER MEDICINES (SAFE ALTERNATIVES) */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[#16845B]" />
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#172B24]">
+                      Suggested Proper Medicines &amp; Safe Alternatives
+                    </h3>
+                  </div>
+                  <span className="text-[10px] font-bold text-[#16845B] bg-[#EAF7F0] px-2 py-0.5 rounded border border-[#CDEBDC]">
+                    For Clinical Review
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-[#64746C]">
+                  To avoid the identified harm while maintaining therapeutic efficacy, the
+                  following proper alternatives from the hospital catalog are suggested:
+                </p>
+
+                {evaluationResult.alternatives && evaluationResult.alternatives.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    {evaluationResult.alternatives.map((alt, i) => (
+                      <div
+                        key={i}
+                        className="p-4 rounded-2xl bg-white border border-[#CDEBDC] hover:border-[#16845B] shadow-2xs hover:shadow-xs transition-all space-y-3 flex flex-col justify-between"
+                      >
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-extrabold text-xs text-[#172B24]">
+                              {alt.name}
+                            </span>
+                            <span className="text-[10px] font-bold text-[#16845B] bg-[#EAF7F0] px-2 py-0.5 rounded">
+                              {alt.class}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-[#64746C] leading-relaxed">
+                            {alt.reason || alt.note}
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSelectAlternative(alt)}
+                          className="w-full py-2 px-3 rounded-xl bg-[#F7FAF8] hover:bg-[#16845B] hover:text-white border border-[#CDEBDC] text-xs font-bold text-[#16845B] transition-all flex items-center justify-center gap-1.5 cursor-pointer group"
+                        >
+                          <Check className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                          <span>Select This Alternative</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-2xl bg-[#F7FAF8] border border-[#E2EAE5] text-xs text-[#64746C] flex items-center gap-2">
+                    <Info className="w-4 h-4 text-[#16845B] shrink-0" />
+                    <span>
+                      Standard therapy may proceed. Consult clinical pharmacist (Ext. 402) for
+                      bespoke dosing adjustments.
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* MEDICAL & WORKFLOW DISCLAIMER */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-[#64746C] space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-[#172B24]">
+                  <Info className="w-4 h-4 text-[#16845B]" />
+                  <span>Medical &amp; Workflow Disclaimer</span>
+                </div>
+                <p className="text-[11px] leading-relaxed">
+                  {evaluationResult.disclaimer ||
+                    'This demonstration engine evaluates rules against synthetic catalog entries. Final drug administration decisions must be verified with hospital pharmacy protocols and attending medical officers.'}
+                </p>
               </div>
             </div>
-          )}
 
-          {/* Clinical & Regulatory Disclaimer */}
-          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-[#64746C] space-y-1">
-            <div className="flex items-center gap-1.5 font-bold text-[#172B24]">
-              <Info className="w-4 h-4 text-[#16845B]" />
-              <span>Medical &amp; Workflow Disclaimer</span>
+            {/* MODAL FOOTER */}
+            <div className="p-4 sm:p-5 bg-[#F7FAF8] border-t border-[#E2EAE5] flex flex-col sm:flex-row sm:items-center justify-between gap-3 sticky bottom-0 z-10">
+              <span className="text-[11px] text-[#64746C] flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#16845B]" />
+                <span>VitalWatch Decision Support • Logged to Audit Trail</span>
+              </span>
+
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsResultModalOpen(false)}
+                  className="px-5 py-2.5 bg-[#16845B] hover:bg-[#105C43] text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                >
+                  Close Assessment Pop-up
+                </button>
+              </div>
             </div>
-            <p className="text-[11px] leading-relaxed">
-              {evaluationResult.disclaimer ||
-                'This demonstration engine evaluates rules against synthetic catalog entries. Final drug administration decisions must be verified with hospital pharmacy protocols and attending medical officers.'}
-            </p>
           </div>
         </div>
       )}

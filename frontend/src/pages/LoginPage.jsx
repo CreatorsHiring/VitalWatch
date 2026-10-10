@@ -125,10 +125,6 @@ export default function LoginPage() {
         role: activeRole,
         email: identifier,
         roleTitle: activeRole === 'receptionist' ? 'Hospital Admissions Officer' : 'Clinical Telemetry Nurse',
-        avatar:
-          activeRole === 'receptionist'
-            ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=256'
-            : 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=256',
       };
       login(fallbackUser, 'fallback-token');
 

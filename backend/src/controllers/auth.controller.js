@@ -21,9 +21,6 @@ export function login(req, res) {
     role: isReceptionist ? 'receptionist' : 'caretaker',
     email: identifier,
     roleTitle: isReceptionist ? 'Hospital Admissions Officer' : 'Clinical Telemetry Nurse',
-    avatar: isReceptionist
-      ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=256'
-      : 'https://images.unsplash.com/photo-1594824813581-9b16957a627f?auto=format&fit=crop&q=80&w=256',
     token: `vitalwatch-token-${Date.now()}-${Math.random().toString(36).substring(7)}`,
   };
 
@@ -32,7 +29,7 @@ export function login(req, res) {
     message: 'Authentication successful',
     data: {
       user,
-      redirectTo: isReceptionist ? '/receptionist/dashboard' : '/caretaker/dashboard',
+      redirectTo: isReceptionist ? '/receptionist/dashboard' : '/nurse/dashboard',
     },
   });
 }
@@ -46,7 +43,6 @@ export function getCurrentUser(req, res) {
       role: 'receptionist',
       email: 'reception.desk@vitalwatch.hospital',
       roleTitle: 'Hospital Admissions Officer',
-      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=256',
     },
   });
 }

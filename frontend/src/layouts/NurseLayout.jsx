@@ -308,16 +308,11 @@ export default function NurseLayout() {
                 <button
                   type="button"
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                  className="flex items-center gap-2.5 p-1.5 sm:px-3 sm:py-1.5 rounded-xl hover:bg-[#F7FAF8] border border-transparent hover:border-[#E2EAE5] transition-all cursor-pointer focus:outline-hidden"
+                  className="flex items-center gap-2.5 p-1.5 sm:px-3 sm:py-1.5 rounded-xl hover:bg-[#F7FAF8] border border-transparent hover:border-[#E2EAE5] transition-all cursor-pointer focus:outline-hidden group"
                 >
-                  <img
-                    src={
-                      user?.avatar ||
-                      'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=256'
-                    }
-                    alt={user?.name || 'Nurse'}
-                    className="w-8 h-8 rounded-lg object-cover ring-1 ring-[#16845B]/30"
-                  />
+                  <div className="w-8 h-8 rounded-xl bg-[#EAF7F0] border border-[#CDEBDC] text-[#16845B] flex items-center justify-center shrink-0 shadow-2xs group-hover:bg-[#E2F5EC] transition-colors">
+                    <User className="w-4 h-4 text-[#16845B]" />
+                  </div>
                   <div className="hidden md:flex flex-col text-left leading-tight">
                     <span className="text-xs font-bold text-[#172B24]">
                       {user?.name || 'Sarah Vance, RN'}
@@ -565,18 +560,13 @@ export default function NurseLayout() {
             </button>
 
             <div className="flex items-center gap-4 mb-6">
-              <img
-                src={
-                  user?.avatar ||
-                  'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=256'
-                }
-                alt={user?.name}
-                className="w-16 h-16 rounded-2xl object-cover ring-2 ring-[#16845B]"
-              />
+              <div className="w-16 h-16 rounded-2xl bg-[#EAF7F0] border-2 border-[#CDEBDC] flex items-center justify-center text-[#16845B] shadow-xs shrink-0">
+                <User className="w-8 h-8 text-[#16845B]" />
+              </div>
               <div>
                 <h3 className="text-lg font-bold text-[#172B24]">{user?.name || 'Sarah Vance, RN'}</h3>
                 <p className="text-xs text-[#64746C]">{user?.roleTitle || 'Senior Inpatient Caretaker'}</p>
-                <span className="mt-1 inline-block text-[10px] font-bold text-[#16845B] bg-[#EAF7F0] px-2 py-0.5 rounded">
+                <span className="mt-1 inline-block text-[10px] font-bold text-[#16845B] bg-[#EAF7F0] px-2 py-0.5 rounded border border-[#CDEBDC]">
                   Clinical Lic: #RN-884920
                 </span>
               </div>

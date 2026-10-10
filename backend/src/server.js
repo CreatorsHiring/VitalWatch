@@ -5,8 +5,10 @@ import wardsRoutes from './routes/wards.routes.js';
 import roomsRoutes from './routes/rooms.routes.js';
 import patientsRoutes from './routes/patients.routes.js';
 import admissionsRoutes from './routes/admissions.routes.js';
+import telemetryRoutes from './routes/telemetry.routes.js';
 import statsRoutes from './routes/stats.routes.js';
 import nurseRoutes from './routes/nurse.routes.js';
+import 'dotenv/config';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -21,6 +23,7 @@ app.use('/api/wards', wardsRoutes);
 app.use('/api/rooms', roomsRoutes);
 app.use('/api/patients', patientsRoutes);
 app.use('/api/admissions', admissionsRoutes);
+app.use('/api/telemetry', telemetryRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/nurse', nurseRoutes);
 

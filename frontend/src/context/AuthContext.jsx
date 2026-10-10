@@ -17,7 +17,6 @@ export function AuthProvider({ children }) {
       role: 'receptionist',
       email: 'reception.desk@vitalwatch.hospital',
       roleTitle: 'Hospital Admissions Officer',
-      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=256',
     };
   });
 
